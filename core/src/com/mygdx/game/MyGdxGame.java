@@ -19,13 +19,14 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
 
+//Let me just say this. FUCK vector math. It's hard. It's a Walter thing.
 
 public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
-	 Texture img;
 	    TiledMap tiledMap; //our map, on which things will exist
 	    PerspectiveCamera camera; //the camera
 	    TiledMapRenderer tiledMapRenderer; //the thing that renders our map
 		private Vector3 target, tileDragOriginLoc; //target isn't used right now, tileDragTarget is
+		boolean wasDragged = false;
 
 	    
 	    @Override
@@ -36,6 +37,8 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 	        camera.lookAt(0f, 0f, 0f); //from the camera's location, look at the bottom-left corner of the world
 	        camera.near = 0.1f;  //render things between .1f to 4000f stuff away
 	        camera.far = 4000.0f;
+	        
+	        target = camera.position.cpy();
 	        
 	        tileDragOriginLoc = camera.position.cpy(); //set tileDragOriginLoc location
 	        
@@ -55,7 +58,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 	        
 	        //depending on what we do, we may use these but for dragging the map around, we don't need it.
 	        
-	        //camera.position.lerp(target, 4f*Gdx.graphics.getDeltaTime());
+	       camera.position.lerp(target, 4f*Gdx.graphics.getDeltaTime());
 	        //camera.position.set(target);
 	        
 	    }
@@ -89,6 +92,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 	    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 	    	//On touchdown, it picks a tileDragTarget as a starting reference point.
 	    	
+	    	wasDragged = false; //set wasDragged to false because we didn't start dragging across the screen yet
 	    	//The next three lines converts screenCoords to worldMap coords
 	    	Ray ray = camera.getPickRay(screenX, screenY); //origin and direction
 			float scale = -camera.position.z/ray.direction.z; //scale it
@@ -96,7 +100,8 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 	    	
 	    	System.out.println("Touching down" + tileDragOriginLoc); //starting dragTileTarget print
 	    	if (((TiledMapTileLayer)tiledMap.getLayers().get(0)).getCell((int)tileDragOriginLoc.x/32, (int) tileDragOriginLoc.y/32).getTile().getProperties().get("blocked") != null)
-	    		System.out.println("BLOCKED TILE"); //just says that it's a blocked tile. 
+	    		System.out.println("BLOCKED TILE"); //just says that it's a blocked tile if it is.... BLOCKED TILES ARE THE MOSTLY PICK ONE WITH A HINT OF YELLOW AT THE BOTTOM RIGHT CORNER
+
 	        return false;
 	    }
 
@@ -104,21 +109,23 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 	    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 	    	//This is to lerp to targets on the map
 	    	
-	    	/*Ray ray = camera.getPickRay(screenX, screenY);
+	    	if (!wasDragged){ //if dragging didn't happen then don't do this.
+	    	Ray ray = camera.getPickRay(screenX, screenY);
 	    	float scale = -camera.position.z/ray.direction.z;
 	    	Vector3 temp = ray.direction.scl(scale);
 	    	temp.add(camera.position);
-	    	if (((TiledMapTileLayer)tiledMap.getLayers().get(0)).getCell((int)temp.x/32, (int) temp.y/32).getTile().getProperties().get("blocked") != null)
-	    		System.out.println("BLOCKED TILE");
 	    	temp.z = camera.position.z;
 	    	temp.y = temp.y - 100f;
-	    	target = temp.cpy();*/
+	    	target = temp.cpy();
+	    	}
 	        return false;
 	    }
 
 		@Override
 	    public boolean touchDragged(int screenX, int screenY, int pointer) {
-			//Same deal as touchup
+			wasDragged = true; //because, well... yeah.
+			
+			//Same deal as touchuplibgdx inpu
 			Ray ray = camera.getPickRay(screenX, screenY);
 			float scale = -camera.position.z/ray.direction.z;
 	    	Vector3 temp3 = ray.direction.scl(scale);
@@ -127,9 +134,9 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 	    	
 	    	Vector3 diff = new Vector3(-tileDragOriginLoc.x + temp3.x, -tileDragOriginLoc.y + temp3.y, 0f);// Get the difference between tileDragTarget and this new location, z is zero cuz we don't want the camera height  to change
 	    	// NewLoc MINUS tileDragTarget location 
-	    	camera.position.set(camera.position.cpy().sub(diff)); //set the camera's position to the opposite direction of diff, I actually don't understand my own shit
+	    	target.set(camera.position.cpy().sub(diff)); //set the camera's position to the opposite direction of diff, I actually don't understand my own shit
 			System.out.println(diff);//shows distance from tileDragTarget (the initial touchDown location)
-	        return false;
+	        return true;
 	    }
 
 	    @Override
@@ -139,7 +146,13 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 
 	    @Override
 	    public boolean scrolled(int amount) {
-	    	target = target.cpy().add(0f, 0f, amount*15f);
+	    	/*Vector3 lookat = camera.position;
+	    	camera.position.set(camera.position.cpy().add(0f, 0f, amount*20f));
+	    	camera.lookAt(lookat);*/
+	    	
+	    	Vector3 lookat = camera.position; //whatever it was looking at earlier, save it
+	    	target.set(camera.position.cpy().add(0f, 0f, amount*55f)); //change height of the camera
+	    	camera.lookAt(lookat); //make it look at the same shit
 	        return false;
 	    }
 
